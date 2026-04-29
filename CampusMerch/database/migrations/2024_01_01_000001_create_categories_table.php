@@ -1,0 +1,27 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('product_categories', function (Blueprint $table) {
+            $table->id();
+            $table->string('name')->comment('分类名称');
+            $table->tinyInteger('status')->default(1)->comment('状态：0-禁用，1-启用');
+            $table->unsignedInteger('sort_order')->default(0)->comment('排序权重');
+            $table->timestamps();
+            $table->softDeletes();
+
+            $table->index('status');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('categories');
+    }
+};
