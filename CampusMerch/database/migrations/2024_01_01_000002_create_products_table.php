@@ -35,7 +35,7 @@ return new class extends Migration
 
             // 索引优化
             $table->index(['status', 'category_id']);
-            $table->index('allow_custom');
+            $table->index('need_design');
         });
     }
 

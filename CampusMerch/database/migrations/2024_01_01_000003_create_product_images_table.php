@@ -21,7 +21,7 @@ return new class extends Migration
             $table->boolean('is_main')->default(false)->comment('是否为封面图：0-否，1-是');
             $table->timestamps();
 
-            $table->index(['product_id', 'sort']);
+            $table->index(['product_id', 'sort_order']);
         });
     }
 
