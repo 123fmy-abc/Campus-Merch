@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('product_categories', function (Blueprint $table) {
+        Schema::create('categories', function (Blueprint $table) {
             $table->id();
             $table->string('name')->comment('分类名称');
             $table->tinyInteger('status')->default(1)->comment('状态：0-禁用，1-启用');
