@@ -9,7 +9,19 @@ class ProductImage extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['product_id', 'file_path', 'file_url', 'sort_order', 'is_cover'];
+    protected $fillable = [
+        'product_id',
+        'file_path',
+        'file_url',
+        'sort_order',
+        'is_cover',
+        'oss_path',
+        'file_name',
+        'width',
+        'height',
+        'is_main',
+        'sort'
+    ];
 
     protected $casts = [
         'is_cover' => 'boolean',
