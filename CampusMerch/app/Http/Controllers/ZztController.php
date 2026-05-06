@@ -25,7 +25,6 @@ use Illuminate\Support\Str;
  * - 3.5 确认收货/核销
  * - 3.6 我的订单
  * - 3.7 上传支付凭证
- * - 3.8 取消订单
  *
  * 分类模块 (zzt6) - 需要管理员权限：
  * - 6.1 新建分类
@@ -744,90 +743,6 @@ class ZztController extends Controller
         }
     }
 
-    /**
-     * 3.8 取消订单
-     *
-     * 用户取消已提交的订单，释放预扣库存
-     *
-     * @param Request $request
-     * @param int $id 订单ID
-     * @return \Illuminate\Http\JsonResponse
-     *
-     * 请求参数：
-     * - cancel_reason: string 取消原因（可选，max:255）
-     */
-    public function cancelOrder(Request $request, $id)
-    {
-        // 验证请求参数
-        $validated = $request->validate([
-            'cancel_reason' => 'nullable|string|max:255',
-        ]);
-
-        // 查询订单
-        $order = Order::where('id', $id)
-            ->where('user_id', $request->user()->id)
-            ->first();
-
-        // 订单不存在
-        if (!$order) {
-            return response()->json([
-                'code' => 404,
-                'message' => '订单不存在',
-            ], 404);
-        }
-
-        // 检查订单状态是否允许取消
-        // 只允许取消 booked(已预订) 或 design_pending(待上传设计稿) 状态的订单
-        if (!in_array($order->status, ['booked', 'design_pending'])) {
-            return response()->json([
-                'code' => 400,
-                'message' => '订单状态不允许取消',
-                'data' => null,
-                'errors' => [
-                    'status' => "当前订单状态为 {$order->status}，仅允许取消已预订或待审核的订单",
-                ],
-            ], 400);
-        }
-
-        try {
-            DB::transaction(function () use ($order, $validated, $request) {
-                // 释放预扣库存
-                $product = $order->product;
-                if ($product) {
-                    $product->reserved_qty -= $order->quantity;
-                    $product->save();
-                }
-
-                // 更新订单状态为已取消
-                $order->status = 'cancelled';
-                $order->cancel_reason = $validated['cancel_reason'] ?? null;
-                $order->cancelled_at = now();
-                $order->cancelled_by = $request->user()->id;
-                $order->save();
-            });
-
-            return response()->json([
-                'code' => 200,
-                'message' => '订单取消成功',
-                'data' => [
-                    'order_id' => $order->id,
-                    'order_no' => $order->order_no,
-                    'status' => $order->status,
-                    'cancel_reason' => $order->cancel_reason,
-                    'cancelled_at' => $order->cancelled_at,
-                    'cancelled_by' => $order->cancelled_by,
-                    'released_stock' => $order->quantity,
-                ],
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'code' => 500,
-                'message' => '取消失败，请稍后重试',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
 
     // ==================== zzt6. 分类模块（需要管理员权限） ====================
 
