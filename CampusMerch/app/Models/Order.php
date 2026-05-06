@@ -62,4 +62,15 @@ class Order extends Model
     {
         return $this->belongsTo(User::class, 'cancelled_by');
     }
+
+    public function cancel($reason = null, $userId = null) {
+        $this->status = 'cancelled';
+        $this->cancel_reason = $reason;
+        $this->cancelled_at = now();
+        $this->cancelled_by = $userId;
+        $this->save();
+
+        // 释放预扣库存（reserved_stock）
+        $this->product()->decrement('reserved_stock', $this->quantity);
+    }
 }
