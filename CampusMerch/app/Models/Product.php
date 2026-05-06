@@ -12,7 +12,8 @@ class Product extends Model
     protected $fillable = [
         'category_id', 'name', 'code', 'description', 'specifications',
         'price', 'real_stock', 'reserved_stock', 'sold_count', 'cover_url',
-        'custom_rule', 'need_design', 'status', 'version', 'max_buy_limit'
+        'custom_rule', 'need_design', 'status', 'version', 'max_buy_limit',
+        'product_id', 'file_path', 'file_url', 'sort_order', 'is_main'
     ];
 
     protected $casts = [
@@ -35,6 +36,10 @@ class Product extends Model
     public function orders()
     {
         return $this->hasMany(Order::class);
+    }
+
+    public function product() {
+        return $this->belongsTo(Product::class);
     }
 
     public function getAvailableStockAttribute()
