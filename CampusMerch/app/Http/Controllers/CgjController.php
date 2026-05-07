@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductImage;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -146,12 +147,26 @@ class CgjController extends Controller
      */
     public function logout()
     {
-        // tymon/jwt-auth 的登出方法会使当前 token 失效
-        auth()->logout();  // 黑名单处理
-        return response()->json([
-            'code'    => 200,
-            'message' => '登出成功',
-        ]);
+        try {
+            $user = auth()->user();
+
+            // 清除用户的 token 缓存
+            Cache::forget('user_token:' . $user->id);
+
+            // 使当前 token 失效
+            auth()->logout();
+
+            return response()->json([
+                'code'    => 200,
+                'message' => '退出登录成功',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'code'    => 500,
+                'message' => '退出登录失败',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**

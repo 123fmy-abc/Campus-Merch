@@ -5,10 +5,15 @@ use App\Http\Controllers\CgjController;
 use App\Http\Controllers\FmyController;
 use App\Http\Controllers\ZztController;
 
-// ========== fmy 负责的接口（不需要认证）==========
-Route::post('/send-email-code', [FmyController::class, 'sendEmailCode']);
+// ========== fmy 负责的接口==========
+Route::post('/verify-code/send', [FmyController::class, 'sendEmailCode']);
 Route::post('/register', [FmyController::class, 'register']);
-Route::post('/reset-password', [FmyController::class, 'resetPassword']);
+Route::post('/login', [FmyController::class, 'login']);
+Route::post('/password/forgot', [FmyController::class, 'forgotPassword']);
+Route::post('/password/reset', [FmyController::class, 'resetPassword']);
+
+
+
 
 
 // ========== zzt 负责的接口 ==========
@@ -103,8 +108,7 @@ Route::middleware('auth:api')->group(function () {
     // 个人中心：注销账号（DELETE请求）
     Route::delete('/user/account', [CgjController::class, 'destroyAccount']);
     // 个人中心：用户登出（POST请求）
-    Route::post('/logout', [CgjController::class, 'logout']);
-
+    Route::post('/logout', [CgjController::class, 'logout'])->middleware('single.session');
     // 取消订单：普通用户取消自己的订单（POST请求）
     Route::post('/orders/{id}/cancel', [CgjController::class, 'cancelOrder']);
 });

@@ -8,7 +8,7 @@ use Illuminate\Notifications\Notifiable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class User extends Authenticatable
+class User extends Authenticatable implements JWTSubject
 {
     use HasFactory, Notifiable,SoftDeletes;
 
@@ -19,10 +19,9 @@ class User extends Authenticatable
         'role',
         'phone',
         'account',
-        'department',
         'avatar',
         'default_address',
-        'status',
+        'email_verified_at',
     ];
 
     protected $hidden = [
@@ -43,11 +42,7 @@ class User extends Authenticatable
         return $this->hasMany(Order::class);
     }
 
-    public function isAdmin()
-    {
-        return $this->role === 2; // 2-管理员
-    }
-    // ========== JWT 接口实现 ==========
+    // JWT 接口实现
     public function getJWTIdentifier()
     {
         return $this->getKey();
