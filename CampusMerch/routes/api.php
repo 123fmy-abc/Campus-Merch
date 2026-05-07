@@ -101,7 +101,9 @@ Route::middleware(['auth:api'])->group(function () {
     Route::post('user/avatar', [CgjController::class, 'uploadAvatar']);
 
     // ========== 取消订单模块 ==========
-    // 取消指定订单（仅限"已预订"或"定制待审"状态的订单）
+
+    // 取消指定订单（仅限"已预订"或"定制待审"状态的订单
+    // 取消指定订单（仅限“已预订”或“定制待审”状态的订单）
     Route::put('orders/{id}/cancel', [CgjController::class, 'cancelOrder']);
 
     // ========== 商品图片管理模块（仅管理员） ==========
