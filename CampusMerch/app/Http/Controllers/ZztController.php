@@ -72,11 +72,11 @@ class ZztController extends Controller
                 'code',
                 'description',
                 'price',
-                'stock',
-                'reserved_qty',
-                'sold_qty',
-                'cover_image',
-                'allow_custom',
+                'real_stock',
+                'reserved_stock',
+                'sold_count',
+                'cover_url',
+                'need_design',
                 'status',
                 'category_id',
                 'low_stock_threshold',
@@ -268,7 +268,7 @@ class ZztController extends Controller
         try {
             $order = DB::transaction(function () use ($request, $validated, $product) {
                 // 预扣库存
-                $product->reserved_qty += $validated['quantity'];
+                $product->reserved_stock += $validated['quantity'];
                 $product->save();
 
                 // 生成订单号：年月日 + 4位序号
@@ -515,8 +515,8 @@ class ZztController extends Controller
                 // 更新商品销量
                 $product = $order->product;
                 if ($product) {
-                    $product->sold_qty += $order->quantity;
-                    $product->reserved_qty -= $order->quantity;
+                    $product->sold_count += $order->quantity;
+                    $product->reserved_stock -= $order->quantity;
                     $product->save();
                 }
             });
@@ -794,7 +794,7 @@ class ZztController extends Controller
                 // 释放预扣库存
                 $product = $order->product;
                 if ($product) {
-                    $product->reserved_qty -= $order->quantity;
+                    $product->reserved_stock -= $order->quantity;
                     $product->save();
                 }
 
