@@ -2,7 +2,14 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CgjController;
+use App\Http\Controllers\FmyController;
 use App\Http\Controllers\ZztController;
+
+// ========== fmy 负责的接口（不需要认证）==========
+Route::post('/send-email-code', [FmyController::class, 'sendEmailCode']);
+Route::post('/register', [FmyController::class, 'register']);
+Route::post('/reset-password', [FmyController::class, 'resetPassword']);
+
 
 // ========== zzt 负责的接口 ==========
 

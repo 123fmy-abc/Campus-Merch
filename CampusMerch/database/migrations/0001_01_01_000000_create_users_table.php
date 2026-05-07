@@ -23,7 +23,7 @@ return new class extends Migration
             $table->string('default_address')->nullable()->comment('默认收货地址');
 
             // 角色：1-普通用户(学生), 2-管理员
-            $table->tinyInteger('role')->default(1)->comment('角色身份');
+            $table->enum('role', ['admin', 'user'])->default('user');
 
             $table->rememberToken();
             $table->timestamps();
