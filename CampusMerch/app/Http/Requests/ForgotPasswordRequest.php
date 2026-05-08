@@ -20,7 +20,7 @@ class ForgotPasswordRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => 'required|email|exists:users,email',
+            'email' => 'required|email|regex:/^\d+@qq\.com$/|exists:users,email',
         ];
     }
 
@@ -31,8 +31,9 @@ class ForgotPasswordRequest extends FormRequest
     {
         return [
             'email.required' => '邮箱不能为空',
-            'email.email' => '邮箱格式不正确',
-            'email.exists' => '该邮箱未注册',
+            'email.email'    => '邮箱格式不正确',
+            'email.regex'    => '只能使用QQ邮箱（格式：QQ号@qq.com）',
+            'email.exists'   => '该邮箱未注册',
         ];
     }
 }
