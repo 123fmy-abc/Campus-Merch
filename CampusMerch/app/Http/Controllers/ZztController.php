@@ -78,7 +78,6 @@ class ZztController extends Controller
                 'need_design',
                 'status',
                 'category_id',
-                'low_stock_threshold',
             ]);
 
         // 按分类筛选
@@ -123,18 +122,18 @@ class ZztController extends Controller
                 'code' => $product->code,
                 'description' => $product->description,
                 'price' => $product->price,
-                'stock' => $product->stock,
-                'reserved_qty' => $product->reserved_qty,
-                'sold_qty' => $product->sold_qty,
-                'available_stock' => $product->available_stock,
-                'cover_image' => $product->cover_image,
-                'allow_custom' => $product->allow_custom,
+                'stock' => $product->real_stock,
+                'reserved_qty' => $product->reserved_stock,
+                'sold_qty' => $product->sold_count,
+                'available_stock' => $product->real_stock - $product->reserved_stock,
+                'cover_image' => $product->cover_url,
+                'allow_custom' => $product->need_design,
                 'status' => $product->status,
                 'category' => $product->category ? [
                     'id' => $product->category->id,
                     'name' => $product->category->name,
                 ] : null,
-                'is_low_stock' => $product->is_low_stock,
+                'is_low_stock' => $product->real_stock <= 10,
             ];
         });
 
@@ -391,22 +390,12 @@ class ZztController extends Controller
             // 生成唯一文件名
             $uniqueName = date('YmdHis') . '_' . Str::random(6) . '.' . $file->getClientOriginalExtension();
 
-            // OSS 存储路径
-            $ossObject = "merch-designs/{$order->id}/{$uniqueName}";
-
-            // 上传到阿里云 OSS
-            $ossService = new OssService();
-            $uploadResult = $ossService->uploadFile($ossObject, $file->getRealPath());
-
-            if (!$uploadResult['success']) {
-                return response()->json([
-                    'code' => 500,
-                    'message' => '文件上传失败',
-                    'error' => $uploadResult['error'],
-                ], 500);
-            }
-
-            $fileUrl = $uploadResult['url'];
+            // 本地存储路径
+            $storagePath = "designs/{$order->id}";
+            
+            // 存储文件到本地
+            $filePath = $file->storeAs($storagePath, $uniqueName, 'public');
+            $fileUrl = Storage::url($filePath);
 
             // 获取图片尺寸（如果是图片）
             $width = null;
@@ -423,6 +412,7 @@ class ZztController extends Controller
             $attachment = OrderAttachment::create([
                 'order_id' => $order->id,
                 'file_name' => $fileName,
+                'file_path' => $filePath,
                 'file_url' => $fileUrl,
                 'mime_type' => $mimeType,
                 'file_size' => $fileSize,
@@ -670,22 +660,12 @@ class ZztController extends Controller
             // 生成唯一文件名
             $uniqueName = date('YmdHis') . '_' . Str::random(6) . '.' . $file->getClientOriginalExtension();
 
-            // OSS 存储路径
-            $ossObject = "payment-proofs/{$order->id}/{$uniqueName}";
-
-            // 上传到阿里云 OSS
-            $ossService = new OssService();
-            $uploadResult = $ossService->uploadFile($ossObject, $file->getRealPath());
-
-            if (!$uploadResult['success']) {
-                return response()->json([
-                    'code' => 500,
-                    'message' => '文件上传失败',
-                    'error' => $uploadResult['error'],
-                ], 500);
-            }
-
-            $fileUrl = $uploadResult['url'];
+            // 本地存储路径
+            $storagePath = "payment-proofs/{$order->id}";
+            
+            // 存储文件到本地
+            $filePath = $file->storeAs($storagePath, $uniqueName, 'public');
+            $fileUrl = Storage::url($filePath);
 
             // 获取图片尺寸
             $imageInfo = getimagesize($file->getRealPath());
@@ -696,6 +676,7 @@ class ZztController extends Controller
             $attachment = OrderAttachment::create([
                 'order_id' => $order->id,
                 'file_name' => $fileName,
+                'file_path' => $filePath,
                 'file_url' => $fileUrl,
                 'mime_type' => $mimeType,
                 'file_size' => $fileSize,
