@@ -139,6 +139,7 @@ class FmyController extends Controller
                     'name' => $user->name,
                     'phone' => $user->phone,
                     'email' => $user->email,
+                    'role' => $user->role,
                 ]
             ]
         ]);
@@ -272,6 +273,7 @@ class FmyController extends Controller
                     'name'    => $user->name,
                     'email'   => $user->email,
                     'phone'   => $user->phone,
+                    'role'    => $user->role,
                     'default_address'=> $user->default_address,
                     'avatar'  => $user->avatar,
                 ],
