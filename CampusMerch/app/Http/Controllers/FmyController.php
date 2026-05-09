@@ -2,32 +2,21 @@
 
 namespace App\Http\Controllers;
 
-use App\Exports\OrdersExport;
-use App\Http\Requests\ForgotPasswordRequest;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
+use App\Http\Requests\ForgotPasswordRequest;
 use App\Http\Requests\ResetPasswordRequest;
-use App\Imports\ProductsImport;
-use App\Models\AuditLog;
-use App\Models\Order;
-use App\Models\Product;
-use App\Models\StockChangeLog;
 use App\Models\User;
-use App\Services\AuditService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
-use Maatwebsite\Excel\Facades\Excel;
-use Maatwebsite\Excel\Validators\ValidationException;
-use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
-
+use Tymon\JWTAuth\Facades\JWTAuth;
 
 class FmyController extends Controller
 {
-    /**
+    /**1
      * 发送 QQ 邮箱验证码
      * 请求参数:
      * - email: 目标邮箱地址 (必填)

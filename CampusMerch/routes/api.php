@@ -5,14 +5,6 @@ use App\Http\Controllers\CgjController;
 use App\Http\Controllers\FmyController;
 use App\Http\Controllers\ZztController;
 
-// 未认证处理路由
-Route::get('/unauthenticated', function () {
-    return response()->json([
-        'code' => 401,
-        'message' => '未认证，请先登录',
-    ], 401);
-});
-
 // ========== fmy 负责的接口==========
 Route::post('/verify-code/send', [FmyController::class, 'sendEmailCode']);
 Route::post('/register', [FmyController::class, 'register']);
@@ -20,49 +12,28 @@ Route::post('/login', [FmyController::class, 'login']);
 Route::post('/password/forgot', [FmyController::class, 'forgotPassword']);
 Route::post('/password/reset', [FmyController::class, 'resetPassword']);
 
-// 需要认证的路由
-Route::middleware('auth:api')->group(function () {
-    // 管理员：批量导入商品（Excel）
-    Route::post('/products/import', [FmyController::class, 'importProducts']);
-
-    // 管理员：订单报表导出
-    Route::get('/orders/export', [FmyController::class, 'exportOrders']);
-    Route::get('/orders/export/columns', [FmyController::class, 'getExportColumns']);
-
-    // 管理员：订单审核
-    Route::put('/admin/orders/{id}/review', [FmyController::class, 'reviewOrder']);
-
-    // 管理员：商品维护
-    Route::put('/products/{id}', [FmyController::class, 'updateProduct']);
-
-    // 管理员：数据看板
-    Route::get('/admin/stats', [FmyController::class, 'getDashboardStats']);
-});
-
 
 
 
 
 // ========== zzt 负责的接口 ==========
 
-// ==================== zzt3. 用户接口（公开接口）====================
+// 需要认证的路由
+Route::middleware('auth:sanctum')->group(function () {
 
-/**
- * 3.1 商品大厅 - 获取商品列表，支持筛选
- * GET /api/products?category_id=1&min_price=50&keyword=文化衫
- */
-Route::get('/products', [ZztController::class, 'productIndex']);
+    // ==================== zzt3. 用户接口 ====================
 
-/**
- * 3.2 商品详情 - 获取单个商品详细信息
- * GET /api/products/{id}
- */
-Route::get('/products/{id}', [ZztController::class, 'productShow']);
+    /**
+     * 3.1 商品大厅 - 获取商品列表，支持筛选
+     * GET /api/products?category_id=1&min_price=50&keyword=文化衫
+     */
+    Route::get('/products', [ZztController::class, 'productIndex']);
 
-// 需要认证的路由（使用 JWT guard）
-Route::middleware('auth:api')->group(function () {
-
-    // ==================== zzt3. 用户接口（需要认证）====================
+    /**
+     * 3.2 商品详情 - 获取单个商品详细信息
+     * GET /api/products/{id}
+     */
+    Route::get('/products/{id}', [ZztController::class, 'productShow']);
 
     /**
      * 3.3 提交预订 - 创建新订单
@@ -119,13 +90,8 @@ Route::middleware('auth:api')->group(function () {
      * DELETE /api/admin/categories/{id}
      */
     Route::middleware('admin')->delete('/admin/categories/{id}', [ZztController::class, 'destroyCategory']);
-
-    /**
-     * 6.4 创建商品 - 管理员创建新商品
-     * POST /api/admin/products
-     */
-    Route::middleware('admin')->post('/admin/products', [ZztController::class, 'storeProduct']);
 });
+
 
 // ========== cgj 负责的接口 ==========
 
