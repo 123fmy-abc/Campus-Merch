@@ -870,7 +870,7 @@ class ZztController extends Controller
                     'sort_order' => $category->sort_order,
                     'created_at' => $category->created_at,
                 ],
-            ], 201);
+            ], 200);
 
         } catch (\Exception $e) {
             return response()->json([
@@ -1031,6 +1031,79 @@ class ZztController extends Controller
             return response()->json([
                 'code' => 500,
                 'message' => '删除失败，请稍后重试',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * 6.4 创建商品（管理员）
+     *
+     * 管理员创建新商品
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     *
+     * 请求参数：
+     * - name: string 商品名称（必填，唯一）
+     * - code: string 商品编码（必填，唯一）
+     * - description: string 商品描述（可选）
+     * - price: numeric 商品价格（必填）
+     * - category_id: integer 分类ID（必填）
+     * - real_stock: integer 实际库存（必填）
+     * - max_buy_limit: integer 每人限购数量（可选，默认0）
+     * - status: string 状态（可选，draft/published/archived，默认published）
+     */
+    public function storeProduct(Request $request)
+    {
+        // 验证请求参数
+        $validated = $request->validate([
+            'name' => 'required|string|max:255|unique:products,name',
+            'code' => 'required|string|max:50|unique:products,code',
+            'description' => 'nullable|string|max:1000',
+            'price' => 'required|numeric|min:0',
+            'category_id' => 'required|integer|exists:categories,id',
+            'real_stock' => 'required|integer|min:0',
+            'max_buy_limit' => 'nullable|integer|min:0',
+            'status' => 'nullable|string|in:draft,published,archived',
+        ]);
+
+        try {
+            $product = Product::create([
+                'name' => $validated['name'],
+                'code' => $validated['code'],
+                'description' => $validated['description'] ?? null,
+                'price' => $validated['price'],
+                'category_id' => $validated['category_id'],
+                'real_stock' => $validated['real_stock'],
+                'reserved_stock' => 0,
+                'sold_count' => 0,
+                'max_buy_limit' => $validated['max_buy_limit'] ?? 0,
+                'status' => $validated['status'] ?? 'published',
+                'need_design' => false,
+                'version' => 0,
+            ]);
+
+            return response()->json([
+                'code' => 200,
+                'message' => '商品创建成功',
+                'data' => [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'code' => $product->code,
+                    'description' => $product->description,
+                    'price' => $product->price,
+                    'category_id' => $product->category_id,
+                    'real_stock' => $product->real_stock,
+                    'status' => $product->status,
+                    'created_at' => $product->created_at,
+                ],
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'message' => '创建失败，请稍后重试',
                 'error' => $e->getMessage(),
             ], 500);
         }
