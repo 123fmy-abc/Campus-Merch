@@ -12,6 +12,25 @@ Route::post('/login', [FmyController::class, 'login']);
 Route::post('/password/forgot', [FmyController::class, 'forgotPassword']);
 Route::post('/password/reset', [FmyController::class, 'resetPassword']);
 
+// 需要认证的路由
+Route::middleware('auth:api')->group(function () {
+    // 管理员：批量导入商品（Excel）
+    Route::post('/products/import', [FmyController::class, 'importProducts']);
+
+    // 管理员：订单报表导出
+    Route::get('/orders/export', [FmyController::class, 'exportOrders']);
+    Route::get('/orders/export/columns', [FmyController::class, 'getExportColumns']);
+
+    // 管理员：订单审核
+    Route::put('/admin/orders/{id}/review', [FmyController::class, 'reviewOrder']);
+
+    // 管理员：商品维护
+    Route::put('/products/{id}', [FmyController::class, 'updateProduct']);
+
+    // 管理员：数据看板
+    Route::get('/admin/stats', [FmyController::class, 'getDashboardStats']);
+});
+
 
 
 

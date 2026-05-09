@@ -139,4 +139,21 @@ class OssService
             return false;
         }
     }
+
+    /**
+     * 获取带签名的临时访问URL
+     *
+     * @param string $object 对象名称
+     * @param int $timeout 有效期（秒），默认2小时
+     * @return string
+     */
+    public function getSignedUrl(string $object, int $timeout = 7200): string
+    {
+        try {
+            return $this->ossClient->signUrl($this->bucket, $object, $timeout);
+        } catch (OssException $e) {
+            // 如果生成签名URL失败，返回普通URL（如果bucket是公共读）
+            return $this->getUrl($object);
+        }
+    }
 }
