@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class RegisterRequest extends FormRequest
 {
@@ -14,9 +15,15 @@ class RegisterRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'account' => 'required|string|size:11|regex:/^\d{11}$/|unique:users',
+            'account' => [
+                'required', 'string', 'size:11', 'regex:/^\d{11}$/',
+                Rule::unique('users')->whereNull('deleted_at'),
+            ],
             'name' => 'required|string|max:50',
-            'email' => 'required|email|unique:users',
+            'email' => [
+                'required', 'email',
+                Rule::unique('users')->whereNull('deleted_at'),
+            ],
             'password' => ['required', 'string', 'min:8', 'confirmed', 'regex:/^[a-zA-Z][a-zA-Z0-9]*$/'],
             'code' => 'required|string|size:6',
             'phone' => 'nullable|string|regex:/^1[3-9]\d{9}$/',

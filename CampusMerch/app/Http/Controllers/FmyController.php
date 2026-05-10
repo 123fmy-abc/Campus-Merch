@@ -252,21 +252,14 @@ class FmyController extends Controller
     {
         $validated = $request->validated();
 
-        // 查找用户
-        $user = User::where('name', $validated['name'])->first();
-
-        if (!$user) {
-            return response()->json([
-                'code'    => 404,
-                'message' => '用户不存在',
-            ], 404);
-        }
+        // 查找用户（区分大小写）
+        $user = User::whereRaw('`name` = BINARY ?', [$validated['name']])->first();
 
         // 验证密码
-        if (!Hash::check($validated['password'], $user->password)) {
+        if (!$user || !Hash::check($validated['password'], $user->password)) {
             return response()->json([
                 'code'    => 401,
-                'message' => '密码错误',
+                'message' => '用户名或密码错误',
             ], 401);
         }
 
@@ -298,7 +291,8 @@ class FmyController extends Controller
      * 管理员批量导入商品（Excel）
      * POST /api/admin/products/import
      * 文件格式: xlsx/xls, ≤10MB
-     * 表头: name, category, type(spec), price, stock(Real_stock), cover_url, custom_rule
+     * 表头: name, category, code, description, type(spec), spec, price, stock(Real_stock), max_buy_limit,
+     *       cover_url, custom_rule, need_design, status
      */
     public function importProducts(ImportProductRequest $request)
     {

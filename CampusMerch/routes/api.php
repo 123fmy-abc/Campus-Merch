@@ -103,6 +103,8 @@ Route::middleware(['auth:api', 'single.session'])->group(function () {
 
 // 需要认证的接口（使用 JWT guard）
 Route::middleware(['auth:api','single.session'])->group(function () {
+    // 个人中心：获取当前用户信息（GET请求）
+    Route::get('/user', [CgjController::class, 'getUser']);
     // 个人中心：修改密码（PUT请求）
     Route::put('/user/password', [CgjController::class, 'updatePassword']);
     // 个人中心：修改邮箱（PUT请求）
@@ -111,6 +113,8 @@ Route::middleware(['auth:api','single.session'])->group(function () {
     Route::put('/user/profile', [CgjController::class, 'updateProfile']);
     // 个人中心：上传头像（POST请求）
     Route::post('/user/avatar', [CgjController::class, 'uploadAvatar']);
+    // 个人中心：删除头像（DELETE请求）
+    Route::delete('/user/avatar', [CgjController::class, 'deleteAvatar']);
     // 个人中心：注销账号（DELETE请求）
     Route::delete('/user/account', [CgjController::class, 'destroyAccount']);
     // 个人中心：用户登出（POST请求）

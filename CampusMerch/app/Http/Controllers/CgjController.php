@@ -15,6 +15,33 @@ use Illuminate\Validation\ValidationException;
 class CgjController extends Controller
 {
     /**
+     * 0. 获取当前登录用户信息
+     */
+    public function getUser(Request $request)
+    {
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        // 返回用户信息，排除敏感字段
+        return response()->json([
+            'code'    => 200,
+            'message' => 'success',
+            'data'    => [
+                'id'               => $user->id,
+                'name'             => $user->name,
+                'email'            => $user->email,
+                'avatar'           => $user->avatar ? Storage::url($user->avatar) : null,
+                'phone'            => $user->phone,
+                'default_address'  => $user->default_address,
+                'role'             => $user->role,
+                'email_verified_at' => $user->email_verified_at,
+                'created_at'       => $user->created_at,
+                'updated_at'       => $user->updated_at,
+            ],
+        ]);
+    }
+
+    /**
      * 1. 修改密码
      */
     public function updatePassword(Request $request)
@@ -40,27 +67,50 @@ class CgjController extends Controller
     }
 
     /**
-     * 2. 修改邮箱（需验证码，此处给予骨架）
+     * 2. 修改邮箱（仅需验证码 + JWT Token）
      */
     public function updateEmail(Request $request)
     {
         /** @var \App\Models\User $user */
         $request->validate([
             'new_email'   => 'required|email|unique:users,email,' . auth()->id(),
-            'verify_code' => 'required|string',
-            'password'    => 'required|string',
+            'code' => 'required|string|size:6',   // 必填 + 6位数字
+        ], [
+            'new_email.required' => '请输入新邮箱地址',
+            'new_email.email'    => '邮箱格式不正确',
+            'new_email.unique'   => '该邮箱已被占用，请换一个',
+            'code.required'      => '请输入验证码',
+            'code.string'        => '验证码必须是字符串',
+            'code.size'          => '验证码必须为 6 位',
         ]);
 
         $user = auth()->user();
-        if (!Hash::check($request->password, $user->password)) {
-            throw ValidationException::withMessages(['password' => '密码错误']);
+
+        // ✅ 启用验证码校验
+        $cacheKey = "email_code:{$request->new_email}";  // 与 sendEmailCode 保持一致
+        $cachedCode = Cache::get($cacheKey);
+
+        if (!$cachedCode) {
+            return response()->json([
+                'code'    => 400,
+                'message' => '验证码不存在或已过期，请重新发送',
+            ], 400);
         }
 
-        // TODO: 验证码校验（从缓存中获取）
-        // $cachedCode = Cache::get("email_verify_{$request->new_email}");
-        // if (!$cachedCode || $cachedCode !== $request->verify_code) { ... }
+        if ($cachedCode != $request->code) {
+            return response()->json([
+                'code'    => 400,
+                'message' => '验证码错误',
+            ], 400);
+        }
 
-        $user->update(['email' => $request->new_email]);
+        // 更新邮箱后删除验证码（防止重复使用）
+        Cache::forget($cacheKey);
+
+        $user->update([
+            'email'             => $request->new_email,
+            'email_verified_at' => now(),  // 自动标记已验证
+        ]);
 
         return response()->json([
             'code'    => 200,
@@ -76,18 +126,40 @@ class CgjController extends Controller
     {
         $request->validate([
             'name'            => 'sometimes|string|max:255',
-            'phone'           => 'sometimes|string|max:20',
+            'phone'           => ['sometimes', 'string', 'max:20', 'regex:/^1[3-9]\d{9}$/'],
             'default_address' => 'sometimes|string|max:500',
+        ], [
+            'phone.regex' => '手机号码格式不正确，请输入有效的中国大陆手机号',
         ]);
 
         $user = auth()->user();
-        $user->fill($request->only(['name', 'phone', 'default_address']));
+        $fields = ['name', 'phone', 'default_address'];
+        $changed = [];
+
+        foreach ($fields as $field) {
+            if ($request->has($field) && $request->input($field) !== $user->$field) {
+                $changed[] = $field;
+                $user->$field = $request->input($field);
+            }
+        }
+
+        if (empty($changed)) {
+            return response()->json([
+                'code'    => 200,
+                'message' => '无任何修改',
+                'data'    => ['changed_fields' => []],
+            ]);
+        }
+
         $user->save();
 
         return response()->json([
             'code'    => 200,
             'message' => '资料更新成功',
-            'data'    => ['user' => $user->fresh()],
+            'data'    => [
+                'user'           => $user->fresh(),
+                'changed_fields' => $changed,
+            ],
         ]);
     }
 
@@ -118,6 +190,35 @@ class CgjController extends Controller
     }
 
     /**
+     * 4.1 删除头像
+     */
+    public function deleteAvatar(Request $request)
+    {
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        if (!$user->avatar) {
+            return response()->json([
+                'code'    => 400,
+                'message' => '当前没有设置头像',
+            ], 400);
+        }
+
+        // 删除物理文件
+        Storage::disk('public')->delete($user->avatar);
+
+        // 清空数据库字段
+        $user->avatar = null;
+        $user->save();
+
+        return response()->json([
+            'code'    => 200,
+            'message' => '头像已删除',
+            'data'    => ['avatar_url' => null],
+        ]);
+    }
+
+    /**
      * 5. 注销账号（软删除）
      */
     public function destroyAccount(Request $request)
@@ -139,6 +240,7 @@ class CgjController extends Controller
         return response()->json([
             'code'    => 200,
             'message' => '账号已注销',
+            'data'    => null
         ]);
     }
 
@@ -259,6 +361,12 @@ class CgjController extends Controller
             'sort_order' => $request->integer('sort_order', 0),
         ]);
 
+        // 同步封面 URL
+        if ($isMain) {
+            $product->cover_url = $url;
+            $product->save();
+        }
+
         return response()->json([
             'code'    => 200,
             'message' => '图片上传成功',
@@ -316,6 +424,16 @@ class CgjController extends Controller
         }
 
         $image->fill($request->only(['is_main', 'sort_order']))->save();
+
+        // 同步封面 URL
+        if ($image->is_main) {
+            $product->cover_url = $image->file_url;
+            $product->save();
+        } elseif (!$product->images()->where('is_main', true)->exists()) {
+            // 所有图都不是主图了，清空 cover_url
+            $product->cover_url = null;
+            $product->save();
+        }
 
         return response()->json([
             'code'    => 200,
@@ -380,6 +498,12 @@ class CgjController extends Controller
             }
         }
 
+        // 同步封面 URL
+        if ($wasMain) {
+            $product->cover_url = $newMain ? $newMain->file_url : null;
+            $product->save();
+        }
+
         return response()->json([
             'code'    => 200,
             'message' => '图片删除成功',
@@ -391,6 +515,17 @@ class CgjController extends Controller
             ],
         ]);
     }
+    /**
+     * 从 product_images 表同步主图 URL 到 products.cover_url
+     * 规则：取 is_main=1 的第一条；没有则清空
+     */
+    private function syncCoverUrl(Product $product): void
+    {
+        $mainImage = $product->images()->where('is_main', true)->first();
+        $product->cover_url = $mainImage ? $mainImage->file_url : null;
+        $product->save();
+    }
+
     /**
      * 辅助方法：检查是否为管理员（role=2）
      */
