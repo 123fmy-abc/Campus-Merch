@@ -98,7 +98,7 @@ class CgjController extends Controller
     {
         /** @var \App\Models\User $user */
         $request->validate([
-            'avatar' => 'required|image|mimes:jpg,jpeg,png|max:2048',
+            'avatar' => 'required|image|mimes:jpg,jpeg,png|max:10240',
         ]);
 
         $user = auth()->user();
@@ -147,6 +147,7 @@ class CgjController extends Controller
      */
     public function logout()
     {
+        /** @var \App\Models\User $user */
         try {
             $user = auth()->user();
 
@@ -355,7 +356,7 @@ class CgjController extends Controller
     {
         $user = auth()->user() ?? abort(401, '请先登录');
 
-        if ($user->role !== 2) {
+        if ($user->role !== 'admin') {
             abort(403, '无权限访问');
         }
     }
