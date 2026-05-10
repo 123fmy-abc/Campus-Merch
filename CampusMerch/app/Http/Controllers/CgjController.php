@@ -175,10 +175,20 @@ class CgjController extends Controller
      */
     public function cancelOrder(Request $request, $id)
     {
+        // 使用 first() 代替 firstOrFail()
         $order = Order::where('id', $id)
             ->where('user_id', auth()->id())
-            ->firstOrFail();
+            ->first();
 
+        // 手动判断订单是否存在
+        if (!$order) {
+            return response()->json([
+                'code'    => 404,
+                'message' => '订单不存在或不属于当前用户',
+            ], 404);
+        }
+
+        // 以下是原有的状态校验逻辑
         $allowedStatuses = ['booked', 'design_pending'];
         if (!in_array($order->status, $allowedStatuses)) {
             return response()->json([
