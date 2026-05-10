@@ -18,15 +18,19 @@ return new class extends Migration
             $table->foreignId('category_id')->constrained()->comment('分类ID，关联categories表');
             $table->string('code')->unique()->comment('商品编码，唯一标识');
             $table->text('description')->nullable()->comment('商品描述');
-            $table->json('specifications')->nullable()->comment('规格参数JSON，如：尺寸、颜色选项');
+            //"尺寸": ["S", "M", "L", "XL"],
+            //  "颜色": ["红色", "蓝色", "黑色"]
+            $table->json('specifications')->nullable()->comment('规格参数JSON，如：尺寸、颜色选项');//商品
             $table->decimal('price', 10, 2)->comment('单价');
             $table->unsignedInteger('real_stock')->default(0)->comment('实际库存');
             $table->unsignedInteger('reserved_stock')->default(0)->comment('已预订未发货数量（预扣库存）');
             $table->unsignedInteger('sold_count')->default(0)->comment('已售出数量');
             $table->unsignedInteger('max_buy_limit')->comment('每人限购数量');
             $table->string('cover_url')->nullable()->comment('封面图OSS路径');
-            // 定制规则JSON：{"sizes": ["M", "L"], "colors": ["红", "蓝"], "max_file_size": 15}
-            $table->json('custom_rule')->nullable()->comment('定制规则JSON');
+            // "max_file_size": 15,
+            //  "allowed_formats": ["jpg", "jpeg", "png", "pdf", "ai", "psd"],
+            //  "min_resolution": "300dpi"
+            $table->json('custom_rule')->nullable()->comment('定制规则JSON');//定制稿
             $table->boolean('need_design')->default(false)->comment('是否需要定制设计稿');
             $table->enum('status', ['draft', 'published', 'archived'])->default('draft')->comment('状态：draft-草稿，published-上架，archived-下架');
             $table->unsignedInteger('version')->default(0)->comment('乐观锁版本号，防并发覆盖');
