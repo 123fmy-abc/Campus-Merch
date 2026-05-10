@@ -230,7 +230,13 @@ class CgjController extends Controller
     {
         $this->ensureAdmin();
 
-        $product = Product::findOrFail($productId);
+        $product = Product::find($productId);
+        if (!$product) {
+            return response()->json([
+                'code'    => 404,
+                'message' => '商品不存在'
+            ], 404);
+        }
 
         $request->validate([
             'image'      => 'required|image|mimes:jpg,jpeg,png,webp|max:5120',
@@ -275,8 +281,21 @@ class CgjController extends Controller
     {
         $this->ensureAdmin();
 
-        $product = Product::findOrFail($productId);
-        $image   = $product->images()->findOrFail($imageId);
+        $product = Product::find($productId);
+        if (!$product) {
+            return response()->json([
+                'code'    => 404,
+                'message' => '商品不存在'
+            ], 404);
+        }
+
+        $image = $product->images()->find($imageId);
+        if (!$image) {
+            return response()->json([
+                'code'    => 404,
+                'message' => '图片不存在'
+            ], 404);
+        }
 
         $request->validate([
             'image'      => 'sometimes|image|mimes:jpg,jpeg,png,webp|max:5120',
@@ -320,8 +339,21 @@ class CgjController extends Controller
     {
         $this->ensureAdmin();
 
-        $product = Product::findOrFail($productId);
-        $image   = $product->images()->findOrFail($imageId);
+        $product = Product::find($productId);
+        if (!$product) {
+            return response()->json([
+                'code'    => 404,
+                'message' => '商品不存在'
+            ], 404);
+        }
+
+        $image = $product->images()->find($imageId);
+        if (!$image) {
+            return response()->json([
+                'code'    => 404,
+                'message' => '图片不存在'
+            ], 404);
+        }
 
         $force = $request->boolean('force', false);
         if ($image->is_main && !$force) {
