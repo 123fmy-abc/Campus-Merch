@@ -5,10 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="312d8060-5d5e-41ab-9d4c-4bd5d6385053" name="更改" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/Campus-Merch.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/Campus-Merch.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/php.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/php.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/CampusMerch/app/Http/Controllers/CgjController.php" beforeDir="false" afterPath="$PROJECT_DIR$/CampusMerch/app/Http/Controllers/CgjController.php" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -249,10 +246,22 @@
       <workItem from="1777512120517" duration="8329000" />
       <workItem from="1778156969746" duration="963000" />
       <workItem from="1778213501321" duration="2502000" />
+      <workItem from="1778389803363" duration="693000" />
     </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
   </component>
 </project>
