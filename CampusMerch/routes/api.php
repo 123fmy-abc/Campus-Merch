@@ -11,18 +11,7 @@ Route::post('/register', [FmyController::class, 'register']);
 Route::post('/login', [FmyController::class, 'login']);
 Route::post('/password/forgot', [FmyController::class, 'forgotPassword']);
 Route::post('/password/reset', [FmyController::class, 'resetPassword']);
-Route::middleware(['auth:api', 'single.session', 'admin'])->prefix('admin')->group(function () {
 
-    Route::post('/products/import', [FmyController::class, 'importProducts']);
-
-    Route::put('/products/{id}', [FmyController::class, 'updateProduct']);
-
-    Route::get('/orders/export', [FmyController::class, 'exportOrders']);
-
-    Route::put('/orders/{id}/review', [FmyController::class, 'reviewOrder']);
-
-    Route::get('/stats', [FmyController::class, 'dashboardStats']);
-});
 
 
 
@@ -30,7 +19,7 @@ Route::middleware(['auth:api', 'single.session', 'admin'])->prefix('admin')->gro
 // ========== zzt 负责的接口 ==========
 
 // 需要认证的路由
-Route::middleware(['auth:api', 'single.session'])->group(function () {
+Route::middleware('auth:api')->group(function () {
 
     // ==================== zzt3. 用户接口 ====================
 
@@ -76,6 +65,11 @@ Route::middleware(['auth:api', 'single.session'])->group(function () {
      */
     Route::post('/orders/{id}/payment-proof', [ZztController::class, 'uploadPaymentProof']);
 
+    /**
+     * 3.8 取消订单 - 用户取消订单，释放库存
+     * POST /api/orders/{id}/cancel
+     */
+    Route::post('/orders/{id}/cancel', [ZztController::class, 'cancelOrder']);
 
     // ==================== zzt6. 分类模块（需要管理员权限） ====================
 
@@ -114,13 +108,13 @@ Route::middleware(['auth:api','single.session'])->group(function () {
     // 个人中心：注销账号（DELETE请求）
     Route::delete('/user/account', [CgjController::class, 'destroyAccount']);
     // 个人中心：用户登出（POST请求）
-    Route::post('/logout', [CgjController::class, 'logout']);
+    Route::post('/logout', [CgjController::class, 'logout'])->middleware('single.session');
     // 取消订单：普通用户取消自己的订单（POST请求）
     Route::post('/orders/{id}/cancel', [CgjController::class, 'cancelOrder']);
 });
 
 // 商品图片管理（管理员）- 同样使用 auth:api
-Route::prefix('admin')->middleware(['auth:api', 'single.session'])->group(function () {
+Route::prefix('admin')->middleware(['auth:api','single.session'])->group(function () {
     // 管理员：上传商品图片（POST请求）
     Route::post('/products/{productId}/images', [CgjController::class, 'uploadProductImage']);
     // 管理员：修改商品图片（PUT请求）
