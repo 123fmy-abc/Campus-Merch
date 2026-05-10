@@ -22,6 +22,9 @@ return new class extends Migration
             $table->json('new_values')->nullable()->comment('变更后的数据');
             $table->string('ip_address', 45)->nullable()->comment('操作IP');
             $table->string('user_agent', 255)->nullable()->comment('浏览器信息');
+            $table->string('operator_type')->nullable()->comment('操作人类型：User-普通用户，Admin-管理员，System-系统');
+            $table->boolean('is_success')->default(true)->comment('操作是否成功');
+            $table->text('error_message')->nullable()->comment('错误信息（失败时记录）');
             $table->text('remark')->nullable()->comment('操作备注');
             $table->timestamp('created_at')->comment('操作时间');
         });

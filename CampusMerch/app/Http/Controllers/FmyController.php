@@ -28,7 +28,7 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class FmyController extends Controller
 {
-    /**1
+    /**
      * 发送 QQ 邮箱验证码
      * 请求参数:
      * - email: 目标邮箱地址 (必填)
@@ -177,7 +177,7 @@ class FmyController extends Controller
         try {
             Mail::raw("您的密码重置验证码是：{$resetCode}，10分钟内有效，请勿泄露给他人。如非本人操作，请忽略此邮件。", function ($message) use ($email) {
                 $message->to($email)
-                    ->subject('实验室设备系统 - 密码重置');
+                    ->subject('校园周边商城 - 密码重置');
             });
 
             return response()->json([
@@ -434,7 +434,14 @@ class FmyController extends Controller
         $validated = $request->validated();
 
         try {
-            $order = Order::with('product')->findOrFail($id);
+            $order = Order::with('product')->find($id);
+
+            if (!$order) {
+                return response()->json([
+                    'code'    => 404,
+                    'message' => '订单不存在',
+                ], 404);
+            }
 
             // ====== 1. 状态机校验 ======
             if (!in_array($order->status, ['design_pending', 'design_reviewing'])) {
@@ -527,70 +534,6 @@ class FmyController extends Controller
                 'message' => '审核失败：' . $e->getMessage(),
             ], 500);
         }
-    }
-
-
-    // 在 StockService.php 中追加此方法（约第123行后）
-
-    /**
-     * 最终确认扣减库存（审核通过时调用）
-     * reserved_stock 释放，real_stock 减少，sold_count 增加
-     */
-    public static function confirmDeduct(Product $product, int $quantity, $relatedType, $relatedId, $operatorId = null, $remark = '')
-    {
-        $maxRetries = 3;
-        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
-            $freshProduct = Product::find($product->id);
-            if (!$freshProduct) {
-                throw new \Exception('商品不存在');
-            }
-
-            $beforeRealStock    = $freshProduct->real_stock;
-            $beforeReserved     = $freshProduct->reserved_stock;
-            $oldVersion         = $freshProduct->version;
-
-            // 校验库存充足
-            if ($beforeRealStock < $quantity) {
-                throw new \Exception('实际库存不足，无法完成扣减');
-            }
-            if ($beforeReserved < $quantity) {
-                throw new \Exception('预扣库存数据异常');
-            }
-
-            // 乐观锁更新：同时减少 real_stock、reserved_stock、增加 sold_count
-            $updated = Product::where('id', $freshProduct->id)
-                ->where('version', $oldVersion)
-                ->update([
-                    'real_stock'     => $beforeRealStock - $quantity,
-                    'reserved_stock' => $beforeReserved - $quantity,
-                    'sold_count'     => $freshProduct->sold_count + $quantity,
-                    'version'        => $oldVersion + 1,
-                ]);
-
-            if ($updated) {
-                StockChangeLog::create([
-                    'product_id'      => $freshProduct->id,
-                    'type'            => 'confirm_deduct',
-                    'change_qty'      => -$quantity,
-                    'stock_before'    => $beforeRealStock,
-                    'reserved_before' => $beforeReserved,
-                    'stock_after'     => $beforeRealStock - $quantity,
-                    'reserved_after'  => $beforeReserved - $quantity,
-                    'related_type'    => $relatedType,
-                    'related_id'      => $relatedId,
-                    'operator_id'     => $operatorId,
-                    'operator_type'   => StockChangeLog::OPERATOR_ADMIN,
-                    'remark'          => $remark ?? '审核通过，最终扣减库存',
-                ]);
-                return true;
-            }
-
-            if ($attempt == $maxRetries) {
-                throw new \Exception('库存操作冲突，请重试');
-            }
-            usleep(50000); // 50ms 后重试
-        }
-        return false;
     }
 
     /**
@@ -791,7 +734,7 @@ class FmyController extends Controller
             $lowStockProducts = Product::with('category')
                 ->whereRaw('COALESCE(real_stock, 0) - COALESCE(reserved_stock, 0) <= 10')
                 ->where('status', 'published')   // 仅展示在售商品
-                ->orderByRaw('COALESCE(real_stock, 0) - COALESCE(reserved_stock, 0)', 'asc')
+                ->orderByRaw('COALESCE(real_stock, 0) - COALESCE(reserved_stock, 0) ASC')
                 ->select(['id', 'name', 'code', 'real_stock', 'reserved_stock', 'cover_url', 'status', 'category_id'])
                 ->limit(20)
                 ->get()

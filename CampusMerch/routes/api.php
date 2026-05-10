@@ -120,7 +120,7 @@ Route::middleware(['auth:api','single.session'])->group(function () {
 });
 
 // 商品图片管理（管理员）- 同样使用 auth:api
-Route::prefix('admin')->middleware(['auth:api', 'single.session'])->group(function () {
+Route::prefix('admin')->middleware(['auth:api', 'single.session','admin'])->group(function () {
     // 管理员：上传商品图片（POST请求）
     Route::post('/products/{productId}/images', [CgjController::class, 'uploadProductImage']);
     // 管理员：修改商品图片（PUT请求）

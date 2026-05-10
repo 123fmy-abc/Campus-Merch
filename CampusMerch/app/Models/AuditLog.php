@@ -40,12 +40,14 @@ class AuditLog extends Model
 
     protected $fillable = [
         'entity_type', 'entity_id', 'action', 'operator_id',
-        'old_values', 'new_values', 'ip_address','user_agent','remark', 'created_at',
+        'operator_type', 'old_values', 'new_values', 'ip_address',
+        'user_agent', 'is_success', 'error_message', 'remark', 'created_at',
     ];
 
     protected $casts = [
         'old_values' => 'array',
         'new_values' => 'array',
+        'is_success' => 'boolean',
         'created_at' => 'datetime',
     ];
 

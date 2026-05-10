@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\StockService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -63,7 +64,7 @@ class Order extends Model
         $this->cancelled_by = $userId;
         $this->save();
 
-        // 释放预扣库存（reserved_stock）
-        $this->product()->decrement('reserved_stock', $this->quantity);
+        // 释放预扣库存（使用乐观锁，避免并发覆盖）
+        StockService::release($this->product, $this->quantity, 'order', $this->id, $userId, '订单取消，释放预扣库存');
     }
 }

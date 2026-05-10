@@ -749,7 +749,7 @@ class ZztController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|min:2|max:50|unique:categories,name',
             'status' => 'nullable|integer|in:0,1',
-            'sort_order' => 'nullable|integer|min:0',
+            'sort_order' => 'nullable|integer|min:0|max:4294967295',
         ]);
 
         try {
@@ -812,7 +812,7 @@ class ZztController extends Controller
         $validated = $request->validate([
             'name' => 'nullable|string|min:2|max:50|unique:categories,name,' . $id,
             'status' => 'nullable|integer|in:0,1',
-            'sort_order' => 'nullable|integer|min:0',
+            'sort_order' => 'nullable|integer|min:0|max:4294967295',
         ]);
 
         try {
