@@ -355,7 +355,7 @@ class CgjController extends Controller
     {
         $user = auth()->user() ?? abort(401, '请先登录');
 
-        if ($user->role !== 2) {
+        if ($user->role !== 'admin') {
             abort(403, '无权限访问');
         }
     }

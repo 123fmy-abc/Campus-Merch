@@ -19,8 +19,8 @@ class AuditLog extends Model
     public const ACTION_LOGIN = 'login';            // 登录操作
     public const ACTION_LOGOUT = 'logout';          // 登出操作
     public const ACTION_CANCEL = 'cancel';          // 取消操作（订单取消）
-    public const ACTION_SET_MAIN = 'set_main';      // 设置主图操作
-    public const ACTION_RELEASE_STOCK = 'release_stock'; // 释放库存操作
+
+
 
     // 操作人类型常量
     public const OPERATOR_USER = 'User';            // 操作人为普通用户
@@ -39,38 +39,14 @@ class AuditLog extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'entity_type', 'entity_id', 'action', 'operator_id', 'operator_name',
-        'old_values', 'new_values', 'remark', 'created_at',
-        'user_id',            // 操作人ID（关联users表，可为空，比如系统操作）
-        'operator_type',      // 操作人类型：User/Admin/System
-        'target_type',        // 操作目标类型（例如 'Order', 'Product', 'User'，用于多态关联）
-        'target_id',          // 操作目标ID（与target_type组成多态关联）
-        'action',             // 操作动作（对应上面的常量，如 'create', 'update'）
-        'summary',            // 操作摘要（简短描述，便于快速查看）
-        'before_data',        // 变更前的数据（JSON格式）
-        'after_data',         // 变更后的数据（JSON格式）
-        'request_id',         // 请求唯一标识（可用于追踪一次请求关联的多条日志）
-        'request_method',     // HTTP请求方法（GET, POST, PUT, DELETE等）
-        'request_url',        // 完整的请求URL
-        'response_code',      // HTTP响应状态码
-        'execution_time',     // 请求执行耗时（毫秒）
-        'is_success',         // 操作是否成功（布尔值）
-        'error_message',      // 错误信息（当is_success=false时记录）
-        'batch_id',           // 批次ID（用于批量操作，将多条日志关联到同一批次）
-        'ip_address',         // 操作者的IP地址
-        'user_agent',         // 操作者的浏览器User-Agent字符串
+        'entity_type', 'entity_id', 'action', 'operator_id',
+        'old_values', 'new_values', 'ip_address','user_agent','remark', 'created_at',
     ];
 
     protected $casts = [
         'old_values' => 'array',
         'new_values' => 'array',
         'created_at' => 'datetime',
-        'before_data'   => 'array',     // 自动将JSON字段转换为PHP数组
-        'after_data'    => 'array',     // 自动将JSON字段转换为PHP数组
-        'response_code' => 'integer',   // 转为整型
-        'execution_time' => 'integer',  // 转为整型
-        'is_success'    => 'boolean',   // 转为布尔值
-        'updated_at'    => 'datetime',
     ];
 
     public function operator()

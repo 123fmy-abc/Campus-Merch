@@ -10,13 +10,6 @@ class Order extends Model
 {
     use HasFactory,SoftDeletes;
 
-    const STATUS_BOOKED = 10;           // 已预订
-    const STATUS_DESIGN_PENDING = 20;   // 定制待审
-    const STATUS_READY = 30;            // 待发货
-    const STATUS_COMPLETED = 40;        // 已完成
-    const STATUS_REJECTED = 50;         // 已驳回
-    const STATUS_CANCELLED = 60;        // 已取消
-
     protected $fillable = [
         'order_no', 'user_id', 'product_id', 'quantity', 'spec', 'unit_price', 'total_amount', 'receiver_name',
         'receiver_phone', 'delivery_address', 'payment_proof_url', 'paid_at', 'remark', 'design_attachment_id',

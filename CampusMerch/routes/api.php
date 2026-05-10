@@ -19,7 +19,7 @@ Route::post('/password/reset', [FmyController::class, 'resetPassword']);
 // ========== zzt 负责的接口 ==========
 
 // 需要认证的路由
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware('auth:api')->group(function () {
 
     // ==================== zzt3. 用户接口 ====================
 
