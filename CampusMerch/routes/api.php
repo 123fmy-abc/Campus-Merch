@@ -12,15 +12,15 @@ Route::post('/login', [FmyController::class, 'login']);
 Route::post('/password/forgot', [FmyController::class, 'forgotPassword']);
 Route::post('/password/reset', [FmyController::class, 'resetPassword']);
 Route::middleware(['auth:api', 'single.session', 'admin'])->prefix('admin')->group(function () {
-
+    //批量上架
     Route::post('/products/import', [FmyController::class, 'importProducts']);
-
-    Route::put('/products/{id}', [FmyController::class, 'updateProduct']);
-
+    //报表导出
     Route::get('/orders/export', [FmyController::class, 'exportOrders']);
-
+    //订单审核
     Route::put('/orders/{id}/review', [FmyController::class, 'reviewOrder']);
-
+    //商品维护
+    Route::put('/products/{id}', [FmyController::class, 'updateProduct']);
+    //数据看板
     Route::get('/stats', [FmyController::class, 'dashboardStats']);
 });
 

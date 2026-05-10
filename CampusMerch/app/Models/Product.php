@@ -13,7 +13,6 @@ class Product extends Model
         'category_id', 'name', 'code', 'description', 'specifications',
         'price', 'real_stock', 'reserved_stock', 'sold_count', 'cover_url',
         'custom_rule', 'need_design', 'status', 'version', 'max_buy_limit',
-        'product_id', 'file_path', 'file_url', 'sort_order', 'is_main'
     ];
 
     protected $casts = [

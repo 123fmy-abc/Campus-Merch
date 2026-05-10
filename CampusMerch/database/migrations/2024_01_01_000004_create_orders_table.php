@@ -27,7 +27,7 @@ return new class extends Migration
             $table->string('recipient_name')->nullable()->comment('收货人姓名');
             $table->string('recipient_phone')->nullable()->comment('收货人电话');
             $table->text('recipient_address')->nullable()->comment('收货地址');
-            $table->enum('status', ['draft', 'booked', 'design_pending', 'ready', 'completed', 'rejected', 'cancelled'])->default('draft')->comment('订单状态：draft-待提交，booked-已预订，design_pending-定制待审，ready-待发货，completed-已完成，rejected-已驳回，cancelled-已取消');
+            $table->enum('status', ['draft', 'booked', 'design_pending', 'design_reviewing', 'ready', 'shipped', 'completed', 'rejected', 'cancelled'])->default('draft')->comment('订单状态：draft-待提交，booked-已预订，design_pending-定制待审，design_reviewing-审核中，ready-待发货，shipped-已发货，completed-已完成，rejected-已驳回，cancelled-已取消');
             $table->timestamp('submitted_at')->nullable()->comment('订单提交时间');
             $table->timestamp('design_uploaded_at')->nullable()->comment('设计稿上传时间');
             $table->string('payment_proof_url')->nullable()->comment('支付凭证OSS路径（线下转账截图）');

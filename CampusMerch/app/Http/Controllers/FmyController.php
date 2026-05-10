@@ -20,6 +20,7 @@ use App\Http\Requests\ReviewOrderRequest;
 use App\Http\Requests\UpdateProductRequest;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\StockChangeLog;
 use App\Services\AuditService;
 use App\Services\StockService;
 use Illuminate\Support\Facades\DB;
@@ -423,9 +424,6 @@ class FmyController extends Controller
 
     /**
      * 管理员审核订单定制稿（通过/驳回）
-     * PUT /api/admin/orders/{id}/review
-     * Body: { action: "approve"|"reject", remark?, reject_reason? }
-     *
      * 状态流转：
      *   design_pending --[通过]--> ready (待发货)
      *   design_pending --[驳回]--> rejected (已驳回，可重新上传)
@@ -475,8 +473,6 @@ class FmyController extends Controller
 
             // 更新审核信息
             $order->reviewed_by    = $admin->id;
-            $order->reviewer_id    = $admin->id;
-            $order->review_remark  = $validated['remark'] ?? '';
             $order->reviewed_at    = now();
             $order->save();
 
@@ -492,7 +488,7 @@ class FmyController extends Controller
                     'status'        => $order->status,
                     'action'        => $validated['action'],
                     'reject_reason' => $order->reject_reason ?? null,
-                    'remark'        => $order->review_remark,
+                    'remark'        => $validated['remark'] ?? '',
                 ],
                 true
             );
@@ -597,13 +593,14 @@ class FmyController extends Controller
     }
 
     /**
-     * 管理员修改商品信息（乐观锁）
+     * 商品维护
      * PUT /api/admin/products/{id}
      * Body: { name?, category_id?, price?, real_stock?, status?, ... }
      */
     public function updateProduct(UpdateProductRequest $request, $id)
     {
         $admin = JWTAuth::parseToken()->authenticate();
+        // 白名单过滤：只允许 rules 中声明的字段入库，防止非预期字段注入
         $validated = $request->validated();
 
         try {
@@ -611,7 +608,7 @@ class FmyController extends Controller
             $product = Product::findOrFail($id);
             $originalData = $product->toArray();
 
-            // 敏感字段变更检测
+            // 敏感字段变更检测（price / real_stock）
             $sensitiveFields = ['price', 'real_stock'];
             $changedSensitive = [];
             foreach ($sensitiveFields as $field) {
@@ -623,26 +620,55 @@ class FmyController extends Controller
                 }
             }
 
-            // 如果有进行中的订单，禁止下架或删除关键信息
-            if (isset($validated['status']) && $validated['status'] === 'archived') {
+            // ====== 关联订单校验 ======
+            // 1. 下架/归档：禁止有进行中的订单
+            if (isset($validated['status']) && in_array($validated['status'], ['archived', 'draft'])) {
                 $activeOrders = Order::where('product_id', $product->id)
-                    ->whereIn('status', ['booked', 'design_pending', 'ready', 'shipped'])
+                    ->whereIn('status', ['booked', 'design_pending', 'design_reviewing', 'ready', 'shipped'])
                     ->exists();
                 if ($activeOrders) {
                     return response()->json([
                         'code'    => 400,
-                        'message' => '该商品存在未完成的订单，暂时无法下架归档',
+                        'message' => '该商品存在未完成的订单，暂时无法下架或归档',
                     ], 400);
                 }
             }
 
-            // ====== 乐观锁更新 ======
+            // 2. 库存调低：检查是否低于已预扣量（会导致已预订用户无法核销）
+            if (isset($validated['real_stock']) && $validated['real_stock'] < $product->reserved_stock) {
+                return response()->json([
+                    'code'    => 400,
+                    'message' => "库存不能低于已预订量（当前预扣：{$product->reserved_stock}），请先处理相关订单",
+                ], 400);
+            }
+
+            // 3. 价格大幅变动：有进行中订单时给出警告提示（不拦截但记录审计）
+            if (isset($validated['price']) && isset($originalData['price'])) {
+                $priceDiff = abs($validated['price'] - $originalData['price']);
+                $priceRatio = $originalData['price'] > 0 ? $priceDiff / $originalData['price'] : 0;
+                $hasActiveOrders = Order::where('product_id', $product->id)
+                    ->whereIn('status', ['booked', 'design_pending', 'design_reviewing', 'ready'])
+                    ->exists();
+                if ($hasActiveOrders && $priceRatio > 0.3) {
+                    // 变动超30%仅记录到审计日志备注中，不阻止操作
+                    $changedSensitive['_price_warning'] = "价格变动超过30%，该商品有进行中的订单";
+                }
+            }
+
+            // ====== 乐观锁更新（白名单字段） ======
             DB::beginTransaction();
 
             $currentVersion = $product->version;
+            $allowedFields = array_keys($validated); // validated 已经过 FormRequest 规则校验，天然是白名单
+            $updateData = [];
+            foreach ($allowedFields as $field) {
+                $updateData[$field] = $validated[$field];
+            }
+            $updateData['version'] = $currentVersion + 1;
+
             $updatedRows = Product::where('id', $product->id)
                 ->where('version', $currentVersion) // 乐观锁条件
-                ->update(array_merge($validated, ['version' => $currentVersion + 1]));
+                ->update($updateData);
 
             if (!$updatedRows) {
                 DB::rollBack();
@@ -655,11 +681,11 @@ class FmyController extends Controller
             // 刷新模型数据
             $product->refresh();
 
-            // 库存变更记录日志
+            // 库存变更记录日志（type 值与 StockChangeLog 模型常量 TYPE_ADJUST='adjust' 保持一致）
             if (isset($validated['real_stock']) && $validated['real_stock'] != $originalData['real_stock']) {
                 StockChangeLog::create([
                     'product_id'      => $product->id,
-                    'type'            => 'manual_adjust',
+                    'type'            => StockChangeLog::TYPE_ADJUST,   // 统一使用模型常量 'adjust'
                     'change_qty'      => $validated['real_stock'] - $originalData['real_stock'],
                     'stock_before'    => $originalData['real_stock'],
                     'reserved_before' => $product->reserved_stock,
@@ -668,11 +694,12 @@ class FmyController extends Controller
                     'related_type'    => 'manual',
                     'related_id'      => null,
                     'operator_id'     => $admin->id,
+                    'operator_type'   => StockChangeLog::OPERATOR_ADMIN,
                     'remark'          => '管理员手动调整库存',
                 ]);
             }
 
-            // 清除缓存（如果有Redis缓存商品详情）
+            // 清除缓存
             Cache::forget("product:detail:{$product->id}");
 
             // 审计日志
@@ -693,9 +720,9 @@ class FmyController extends Controller
                 'code'    => 200,
                 'message' => '商品信息更新成功',
                 'data'    => [
-                    'id'      => $product->id,
-                    'name'    => $product->name,
-                    'version' => $product->version,
+                    'id'         => $product->id,
+                    'name'       => $product->name,
+                    'version'    => $product->version,
                     'updated_at' => $product->updated_at->format('Y-m-d H:i:s'),
                 ],
             ]);
@@ -727,5 +754,115 @@ class FmyController extends Controller
         }
     }
 
+    /**
+     * 管理员数据看板
+     * 返回指标：
+     * - 今日新预订订单量
+     * - 待审核（设计稿）订单数
+     * - 库存预警商品列表（可用库存 <= 10）
+     * - 各状态订单统计
+     * - 本周销量 TOP5 商品
+     */
+    public function dashboardStats(Request $request)
+    {
+        $admin = JWTAuth::parseToken()->authenticate();
+
+        // 缓存策略：看板数据变化频率低，60s 内复用结果减少数据库压力
+        $cacheKey = 'admin:dashboard:stats';
+        $cacheTtl = 60; // 秒
+
+        $data = Cache::remember($cacheKey, $cacheTtl, function () {
+            $today = today();
+            $weekAgo = now()->subDays(7);
+
+            // ====== 核心聚合指标 ======
+
+            // 1. 今日预订量（status=booked 且创建于今日）
+            $todayBookedCount = Order::whereDate('created_at', $today)
+                ->where('status', 'booked')
+                ->count();
+
+            // 2. 待审核数（设计稿待审核 + 审核中）
+            $pendingReviewCount = Order::whereIn('status', ['design_pending', 'design_reviewing'])
+                ->count();
+
+            // 3. 库存预警：real_stock - reserved_stock <= 10 的商品
+            $lowStockProducts = Product::with('category')
+                ->whereRaw('COALESCE(real_stock, 0) - COALESCE(reserved_stock, 0) <= 10')
+                ->where('status', 'published')   // 仅展示在售商品
+                ->orderByRaw('COALESCE(real_stock, 0) - COALESCE(reserved_stock, 0)', 'asc')
+                ->select(['id', 'name', 'code', 'real_stock', 'reserved_stock', 'cover_url', 'status', 'category_id'])
+                ->limit(20)
+                ->get()
+                ->map(function ($p) {
+                    return [
+                        'id'              => $p->id,
+                        'name'            => $p->name,
+                        'code'            => $p->code,
+                        'real_stock'      => $p->real_stock,
+                        'reserved_stock'  => $p->reserved_stock,
+                        'available_stock' => max(0, ($p->real_stock ?? 0) - ($p->reserved_stock ?? 0)),
+                        'cover_image'     => $p->cover_url,
+                        'category_name'   => $p->category?->name ?? '-',
+                        'is_critical'     => ($p->real_stock ?? 0) <= ($p->reserved_stock ?? 0), // 已超售
+                    ];
+                });
+
+            // 4. 各状态订单数统计
+            $orderStatusStats = Order::query()
+                ->selectRaw('status, COUNT(*) as count')
+                ->groupBy('status')
+                ->pluck('count', 'status')
+                ->toArray();
+
+            // 5. 本周销量 TOP5 商品
+            $topProducts = Order::whereBetween('created_at', [$weekAgo, now()])
+                ->whereIn('status', ['completed', 'ready']) // 已完成或待发货的算有效销量
+                ->selectRaw('product_id, SUM(quantity) as total_qty, COUNT(*) as order_count')
+                ->groupBy('product_id')
+                ->orderByDesc('total_qty')
+                ->limit(5)
+                ->get()
+                ->map(function ($row) {
+                    $prod = Product::find($row->product_id);
+                    return [
+                        'product_id'   => $row->product_id,
+                        'product_name' => $prod?->name ?? '未知商品',
+                        'total_qty'    => (int) $row->total_qty,
+                        'order_count'  => (int) $row->order_count,
+                    ];
+                });
+
+            // 6. 总览数字
+            $overview = [
+                'total_products'       => Product::count(),
+                'published_products'   => Product::where('status', 'published')->count(),
+                'archived_products'    => Product::where('status', 'archived')->count(),
+                'total_orders_today'   => Order::whereDate('created_at', $today)->count(),
+                'low_stock_count'      => $lowStockProducts->count(),
+                'critical_stock_count' => $lowStockProducts->where('is_critical', true)->count(),
+            ];
+
+            return compact(
+                'todayBookedCount',
+                'pendingReviewCount',
+                'lowStockProducts',
+                'orderStatusStats',
+                'topProducts',
+                'overview'
+            );
+        });
+
+        return response()->json([
+            'code'    => 200,
+            'message' => '获取看板数据成功',
+            'data'    => $data,
+            'meta'    => [
+                'cached_at'    => now()->toIso8601String(),
+                'cache_ttl'    => 60,
+                'generated_by' => $admin->name,
+            ],
+        ]);
+    }
 
 }

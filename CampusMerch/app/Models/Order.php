@@ -11,12 +11,12 @@ class Order extends Model
     use HasFactory,SoftDeletes;
 
     protected $fillable = [
-        'order_no', 'user_id', 'product_id', 'quantity', 'spec', 'unit_price', 'total_amount', 'receiver_name',
-        'receiver_phone', 'delivery_address', 'payment_proof_url', 'paid_at', 'remark', 'design_attachment_id',
-        'tracking_no', 'tracking_company', 'shipped_at', 'reviewer_id', 'reviewed_at', 'reject_reason', 'cancel_reason',
-        'cancelled_at', 'cancelled_by', 'source', 'ip_address', 'user_agent', 'booked_at', 'completed_at', 'status',
-        'snapshot', 'size', 'color', 'submitted_at', 'design_uploaded_at', 'reviewed_by', 'review_remark', 'recipient_name',
-        'recipient_phone', 'recipient_address'
+        'order_no', 'user_id', 'product_id', 'quantity',
+        'unit_price', 'total_amount','snapshot','size','color',
+        'remark', 'recipient_name', 'recipient_phone', 'recipient_address',
+        'status','submitted_at','design_uploaded_at','payment_proof_url','paid_at',
+        'reviewed_by','reviewed_at','reject_reason','completed_at','cancel_reason',
+        'cancelled_at','cancelled_by'
     ];
 
     protected $casts = [

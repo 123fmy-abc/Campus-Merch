@@ -14,17 +14,11 @@ class ProductImage extends Model
         'file_path',
         'file_url',
         'sort_order',
-        'is_cover',
-        'oss_path',
-        'file_name',
-        'width',
-        'height',
         'is_main',
-        'sort'
     ];
 
     protected $casts = [
-        'is_cover' => 'boolean',
+        'is_main' => 'boolean',
     ];
 
     public function product()

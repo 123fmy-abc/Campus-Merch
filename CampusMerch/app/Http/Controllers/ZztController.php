@@ -171,7 +171,7 @@ class ZztController extends Controller
             return [
                 'id' => $image->id,
                 'file_url' => $image->file_url,
-                'is_cover' => $image->is_cover,
+                'is_main' => $image->is_main,
                 'sort_order' => $image->sort_order,
             ];
         });
@@ -392,7 +392,7 @@ class ZztController extends Controller
 
             // 本地存储路径
             $storagePath = "designs/{$order->id}";
-            
+
             // 存储文件到本地
             $filePath = $file->storeAs($storagePath, $uniqueName, 'public');
             $fileUrl = Storage::url($filePath);
@@ -662,7 +662,7 @@ class ZztController extends Controller
 
             // 本地存储路径
             $storagePath = "payment-proofs/{$order->id}";
-            
+
             // 存储文件到本地
             $filePath = $file->storeAs($storagePath, $uniqueName, 'public');
             $fileUrl = Storage::url($filePath);

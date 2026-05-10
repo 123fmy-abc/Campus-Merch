@@ -160,7 +160,7 @@ class StockService
             if ($updated) {
                 StockChangeLog::create([
                     'product_id'      => $freshProduct->id,
-                    'type'            => 'confirm_deduct',
+                    'type'            => StockChangeLog::TYPE_DEDUCT,   // 核销出库，统一使用模型常量
                     'change_qty'      => -$quantity,
                     'stock_before'    => $beforeRealStock,
                     'reserved_before' => $beforeReserved,
@@ -169,7 +169,8 @@ class StockService
                     'related_type'    => $relatedType,
                     'related_id'      => $relatedId,
                     'operator_id'     => $operatorId,
-                    'remark'          => $remark ?? '审核通过，最终扣减库存',
+                    'operator_type'   => $operatorId ? StockChangeLog::OPERATOR_ADMIN : null,
+                    'remark'          => $remark ?: '审核通过，最终扣减库存',
                 ]);
                 return true;
             }

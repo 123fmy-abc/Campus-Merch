@@ -72,8 +72,8 @@ class AuditLog extends Model
      */
     public function target()
     {
-        // Laravel 会根据 target_type 和 target_id 自动解析对应的模型类
-        return $this->morphTo();
+        // 数据库字段为 entity_type / entity_id，需显式指定 morphTo 映射
+        return $this->morphTo('target', 'entity_type', 'entity_id');
     }
 
 
