@@ -579,6 +579,7 @@ class FmyController extends Controller
                     'related_type'    => $relatedType,
                     'related_id'      => $relatedId,
                     'operator_id'     => $operatorId,
+                    'operator_type'   => StockChangeLog::OPERATOR_ADMIN,
                     'remark'          => $remark ?? '审核通过，最终扣减库存',
                 ]);
                 return true;

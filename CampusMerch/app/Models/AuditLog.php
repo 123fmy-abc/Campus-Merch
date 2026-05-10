@@ -54,18 +54,6 @@ class AuditLog extends Model
         return $this->belongsTo(User::class, 'operator_id');
     }
     /**
-     * 关联操作人（多态关联中的User模型）
-     * 注意：由于操作人可能是User或Admin，但两者都使用users表，
-     * 因此直接关联User模型即可。
-     *
-     */
-    public function user()
-    {
-        // 外键 user_id 参照 users.id，允许为空
-        return $this->belongsTo(User::class, 'user_id');
-    }
-
-    /**
      * 定义多态关联的目标对象（被操作的对象）
      * 通过 target_type 和 target_id 动态关联到对应的模型（如 Order, Product, User等）
      * 使用此方法可以方便地获取被操作的原对象。

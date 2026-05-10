@@ -280,6 +280,14 @@ class ZztController extends Controller
                 // 计算订单总金额
                 $totalAmount = $product->price * $validated['quantity'];
 
+                // 构建商品快照（固化下单时的商品信息，防止后续修改影响历史订单）
+                $snapshot = [
+                    'product_name'   => $product->name,
+                    'product_price'  => $product->price,
+                    'cover_url'      => $product->cover_url ?? null,
+                    'specifications' => $product->specifications ?? null,
+                ];
+
                 // 创建订单
                 $order = Order::create([
                     'order_no' => $orderNo,
@@ -296,6 +304,7 @@ class ZztController extends Controller
                     'recipient_name' => $validated['recipient_name'],
                     'recipient_phone' => $validated['recipient_phone'],
                     'recipient_address' => $validated['recipient_address'],
+                    'snapshot'       => $snapshot,
                 ]);
 
                 return $order;
@@ -501,13 +510,8 @@ class ZztController extends Controller
                 $order->completed_at = now();
                 $order->save();
 
-                // 更新商品销量
-                $product = $order->product;
-                if ($product) {
-                    $product->sold_count += $order->quantity;
-                    $product->reserved_stock -= $order->quantity;
-                    $product->save();
-                }
+                // 库存已在审核通过时(confirmDeduct)正确扣减
+                // 此处仅更新订单状态，无需重复操作 sold_count / reserved_stock
             });
 
             return response()->json([
@@ -724,91 +728,6 @@ class ZztController extends Controller
         }
     }
 
-    /**
-     * 3.8 取消订单
-     *
-     * 用户取消已提交的订单，释放预扣库存
-     *
-     * @param Request $request
-     * @param int $id 订单ID
-     * @return \Illuminate\Http\JsonResponse
-     *
-     * 请求参数：
-     * - cancel_reason: string 取消原因（可选，max:255）
-     */
-    public function cancelOrder(Request $request, $id)
-    {
-        // 验证请求参数
-        $validated = $request->validate([
-            'cancel_reason' => 'nullable|string|max:255',
-        ]);
-
-        // 查询订单
-        $order = Order::where('id', $id)
-            ->where('user_id', $request->user()->id)
-            ->first();
-
-        // 订单不存在
-        if (!$order) {
-            return response()->json([
-                'code' => 404,
-                'message' => '订单不存在',
-            ], 404);
-        }
-
-        // 检查订单状态是否允许取消
-        // 只允许取消 booked(已预订) 或 design_pending(待上传设计稿) 状态的订单
-        if (!in_array($order->status, ['booked', 'design_pending'])) {
-            return response()->json([
-                'code' => 400,
-                'message' => '订单状态不允许取消',
-                'data' => null,
-                'errors' => [
-                    'status' => "当前订单状态为 {$order->status}，仅允许取消已预订或待审核的订单",
-                ],
-            ], 400);
-        }
-
-        try {
-            DB::transaction(function () use ($order, $validated, $request) {
-                // 释放预扣库存
-                $product = $order->product;
-                if ($product) {
-                    $product->reserved_stock -= $order->quantity;
-                    $product->save();
-                }
-
-                // 更新订单状态为已取消
-                $order->status = 'cancelled';
-                $order->cancel_reason = $validated['cancel_reason'] ?? null;
-                $order->cancelled_at = now();
-                $order->cancelled_by = $request->user()->id;
-                $order->save();
-            });
-
-            return response()->json([
-                'code' => 200,
-                'message' => '订单取消成功',
-                'data' => [
-                    'order_id' => $order->id,
-                    'order_no' => $order->order_no,
-                    'status' => $order->status,
-                    'cancel_reason' => $order->cancel_reason,
-                    'cancelled_at' => $order->cancelled_at,
-                    'cancelled_by' => $order->cancelled_by,
-                    'released_stock' => $order->quantity,
-                ],
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'code' => 500,
-                'message' => '取消失败，请稍后重试',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
     // ==================== zzt6. 分类模块（需要管理员权限） ====================
 
     /**
@@ -1017,76 +936,4 @@ class ZztController extends Controller
         }
     }
 
-    /**
-     * 6.4 创建商品（管理员）
-     *
-     * 管理员创建新商品
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
-     *
-     * 请求参数：
-     * - name: string 商品名称（必填，唯一）
-     * - code: string 商品编码（必填，唯一）
-     * - description: string 商品描述（可选）
-     * - price: numeric 商品价格（必填）
-     * - category_id: integer 分类ID（必填）
-     * - real_stock: integer 实际库存（必填）
-     * - max_buy_limit: integer 每人限购数量（可选，默认0）
-     * - status: string 状态（可选，draft/published/archived，默认published）
-     */
-    public function storeProduct(Request $request)
-    {
-        // 验证请求参数
-        $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:products,name',
-            'code' => 'required|string|max:50|unique:products,code',
-            'description' => 'nullable|string|max:1000',
-            'price' => 'required|numeric|min:0',
-            'category_id' => 'required|integer|exists:categories,id',
-            'real_stock' => 'required|integer|min:0',
-            'max_buy_limit' => 'nullable|integer|min:0',
-            'status' => 'nullable|string|in:draft,published,archived',
-        ]);
-
-        try {
-            $product = Product::create([
-                'name' => $validated['name'],
-                'code' => $validated['code'],
-                'description' => $validated['description'] ?? null,
-                'price' => $validated['price'],
-                'category_id' => $validated['category_id'],
-                'real_stock' => $validated['real_stock'],
-                'reserved_stock' => 0,
-                'sold_count' => 0,
-                'max_buy_limit' => $validated['max_buy_limit'] ?? 0,
-                'status' => $validated['status'] ?? 'published',
-                'need_design' => false,
-                'version' => 0,
-            ]);
-
-            return response()->json([
-                'code' => 200,
-                'message' => '商品创建成功',
-                'data' => [
-                    'id' => $product->id,
-                    'name' => $product->name,
-                    'code' => $product->code,
-                    'description' => $product->description,
-                    'price' => $product->price,
-                    'category_id' => $product->category_id,
-                    'real_stock' => $product->real_stock,
-                    'status' => $product->status,
-                    'created_at' => $product->created_at,
-                ],
-            ], 200);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'code' => 500,
-                'message' => '创建失败，请稍后重试',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
 }
