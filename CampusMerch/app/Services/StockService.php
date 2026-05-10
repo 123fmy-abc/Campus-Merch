@@ -120,4 +120,65 @@ class StockService
         }
         return false;
     }
+
+    /**
+     * 最终确认扣减库存（审核通过时调用）
+     * reserved_stock 释放，real_stock 减少，sold_count 增加
+     * 使用乐观锁 version 字段防并发
+     */
+    public static function confirmDeduct(Product $product, int $quantity, $relatedType, $relatedId, $operatorId = null, $remark = '')
+    {
+        $maxRetries = 3;
+        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+            $freshProduct = Product::find($product->id);
+            if (!$freshProduct) {
+                throw new \Exception('商品不存在');
+            }
+
+            $beforeRealStock    = $freshProduct->real_stock;
+            $beforeReserved     = $freshProduct->reserved_stock;
+            $oldVersion         = $freshProduct->version;
+
+            // 校验库存充足
+            if ($beforeRealStock < $quantity) {
+                throw new \Exception('实际库存不足，无法完成扣减');
+            }
+            if ($beforeReserved < $quantity) {
+                throw new \Exception('预扣库存数据异常');
+            }
+
+            // 乐观锁更新：同时减少 real_stock、reserved_stock、增加 sold_count
+            $updated = Product::where('id', $freshProduct->id)
+                ->where('version', $oldVersion)
+                ->update([
+                    'real_stock'     => $beforeRealStock - $quantity,
+                    'reserved_stock' => $beforeReserved - $quantity,
+                    'sold_count'     => $freshProduct->sold_count + $quantity,
+                    'version'        => $oldVersion + 1,
+                ]);
+
+            if ($updated) {
+                StockChangeLog::create([
+                    'product_id'      => $freshProduct->id,
+                    'type'            => 'confirm_deduct',
+                    'change_qty'      => -$quantity,
+                    'stock_before'    => $beforeRealStock,
+                    'reserved_before' => $beforeReserved,
+                    'stock_after'     => $beforeRealStock - $quantity,
+                    'reserved_after'  => $beforeReserved - $quantity,
+                    'related_type'    => $relatedType,
+                    'related_id'      => $relatedId,
+                    'operator_id'     => $operatorId,
+                    'remark'          => $remark ?? '审核通过，最终扣减库存',
+                ]);
+                return true;
+            }
+
+            if ($attempt == $maxRetries) {
+                throw new \Exception('库存操作冲突，请重试');
+            }
+            usleep(50000); // 50ms 后重试
+        }
+        return false;
+    }
 }
