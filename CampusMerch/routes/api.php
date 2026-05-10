@@ -96,7 +96,7 @@ Route::middleware('auth:api')->group(function () {
 // ========== cgj 负责的接口 ==========
 
 // 需要认证的接口（使用 JWT guard）
-Route::middleware('auth:api')->group(function () {
+Route::middleware(['auth:api','single.session'])->group(function () {
     // 个人中心：修改密码（PUT请求）
     Route::put('/user/password', [CgjController::class, 'updatePassword']);
     // 个人中心：修改邮箱（PUT请求）
